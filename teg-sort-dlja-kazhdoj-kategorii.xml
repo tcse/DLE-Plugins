@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<dleplugin>
+	<name>Тег sort для каждой категории</name>
+	<description>По умолчанию в DLE тег {sort} сортирует новости во всех категориях, если она была изменена пользователем [ https://lazydev.pro ]</description>
+	<icon></icon>
+	<version></version>
+	<dleversion></dleversion>
+	<versioncompare>less</versioncompare>
+	<upgradeurl></upgradeurl>
+	<filedelete>0</filedelete>
+	<mysqlinstall><![CDATA[]]></mysqlinstall>
+	<mysqlupgrade><![CDATA[]]></mysqlupgrade>
+	<mysqlenable><![CDATA[]]></mysqlenable>
+	<mysqldisable><![CDATA[]]></mysqldisable>
+	<mysqldelete><![CDATA[]]></mysqldelete>
+	<file name="engine/modules/functions.php">
+		<operation action="replace">
+			<searchcode><![CDATA[function news_sort($do) {
+	
+	global $config, $lang;]]></searchcode>
+			<replacecode><![CDATA[function news_sort($do) {
+	
+	global $config, $lang, $category_id;]]></replacecode>
+		</operation>
+		<operation action="replace">
+			<searchcode><![CDATA[	$find_sort = "dle_sort_" . $do;
+	$direction_sort = "dle_direction_" . $do;]]></searchcode>
+			<replacecode><![CDATA[if ($do=="cat") {
+	$find_sort = "dle_sort_" . $do . "_" .  $category_id;
+    $direction_sort = "dle_direction_" . $do . "_" . $category_id;
+} else {
+	$find_sort = "dle_sort_" . $do;
+    $direction_sort = "dle_direction_" . $do;
+}]]></replacecode>
+		</operation>
+	</file>
+	<file name="engine/engine.php">
+		<operation action="replace">
+			<searchcode><![CDATA[if (isset ( $_SESSION['dle_sort_cat'] )) $news_sort_by = $_SESSION['dle_sort_cat'];]]></searchcode>
+			<replacecode><![CDATA[if (isset ( $_SESSION['dle_sort_cat_' . $category_id] )) $news_sort_by = $_SESSION['dle_sort_cat_' . $category_id];]]></replacecode>
+		</operation>
+		<operation action="replace">
+			<searchcode><![CDATA[if (isset ( $_SESSION['dle_direction_cat'] )) $news_direction_by = $_SESSION['dle_direction_cat'];]]></searchcode>
+			<replacecode><![CDATA[if (isset ( $_SESSION['dle_direction_cat_' . $category_id] )) $news_direction_by = $_SESSION['dle_direction_cat_' . $category_id];]]></replacecode>
+		</operation>
+	</file>
+</dleplugin>

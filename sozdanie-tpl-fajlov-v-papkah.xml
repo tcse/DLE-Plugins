@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<dleplugin>
+	<name>Создание tpl файлов в папках</name>
+	<description>Плагин позволит создавать файлы внутри папок шаблона [ https://lazydev.pro ]</description>
+	<icon></icon>
+	<version></version>
+	<dleversion>13.0</dleversion>
+	<versioncompare>greater</versioncompare>
+	<upgradeurl></upgradeurl>
+	<filedelete>0</filedelete>
+	<mysqlinstall><![CDATA[]]></mysqlinstall>
+	<mysqlupgrade><![CDATA[]]></mysqlupgrade>
+	<mysqlenable><![CDATA[]]></mysqlenable>
+	<mysqldisable><![CDATA[]]></mysqldisable>
+	<mysqldelete><![CDATA[]]></mysqldelete>
+	<file name="engine/ajax/templates.php">
+		<operation action="replace">
+			<searchcode><![CDATA[$file = trim( totranslit($_POST['file'], false, false) );]]></searchcode>
+			<replacecode><![CDATA[function cleanDir($path) {
+	$path = str_replace(chr(0), '', $path);
+	$path = trim(strip_tags($path));
+	$path = str_replace(['\\', '^', ':', '*', '?', '"', '<', '>', '|', ',', '=', '@', '#', '%', '&', '!', '$', ';', '.php', '.ppp'], '', $path);
+	$path = str_replace('.', '', $path);
+	$path = preg_replace("/\s+/u", '-', $path);
+	$path = preg_replace('#[\-]+#i', '-', $path);
+	$path = strtolower($path);
+	return $path;
+}
+$createDir = false;
+if (strpos($_POST['file'], '/') > 0) {
+	$templateInfo = pathinfo($_POST['file']);
+	$createDir = cleanDir($templateInfo['dirname']);
+	$file = trim(totranslit($templateInfo['basename'], false, false));
+} else {
+	$file = trim( totranslit($_POST['file'], false, false) );
+}]]></replacecode>
+		</operation>
+		<operation action="before">
+			<searchcode><![CDATA[$handle = fopen( $root.$template."/".$file.".tpl", "w" );]]></searchcode>
+			<replacecode><![CDATA[if ($createDir) {
+	if (substr($createDir, -1, 1) == '/') {
+		$createDir = substr($createDir, 0, -1);
+	}
+	if (substr($createDir, 0, 1) == '/') {
+		$createDir = substr($createDir, 1);
+	}
+	if (!is_dir($root . $template . '/' . $createDir)) {
+		@mkdir($root . $template . '/' . $createDir, 0777, true);
+	}
+	$template = $template . '/' . $createDir;
+}]]></replacecode>
+		</operation>
+	</file>
+</dleplugin>

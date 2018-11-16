@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<dleplugin>
+	<name>Транслит ссылок в дополнительных полях</name>
+	<description>Используем транслит вместо кириллицы в ссылках дополнительных полей [ https://lazydev.pro ]</description>
+	<icon></icon>
+	<version></version>
+	<dleversion>13</dleversion>
+	<versioncompare>greater</versioncompare>
+	<upgradeurl></upgradeurl>
+	<filedelete>0</filedelete>
+	<mysqlinstall><![CDATA[ALTER TABLE `{prefix}_xfsearch` ADD `tagvalue_translit` VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL AFTER `tagvalue`;]]></mysqlinstall>
+	<mysqlupgrade><![CDATA[]]></mysqlupgrade>
+	<mysqlenable><![CDATA[]]></mysqlenable>
+	<mysqldisable><![CDATA[]]></mysqldisable>
+	<mysqldelete><![CDATA[ALTER TABLE `{prefix}_xfsearch` DROP `tagvalue_translit`;]]></mysqldelete>
+	<file name="engine/inc/xfields.php">
+		<operation action="after">
+			<searchcode><![CDATA[$editedxfield[6] = ($editedxfield[6] == "on" ? 1 : 0);]]></searchcode>
+			<replacecode><![CDATA[$editedxfield[22] = ($editedxfield[22] == "on" ? 1 : 0);]]></replacecode>
+		</operation>
+		<operation action="replace">
+			<searchcode><![CDATA[} else $editedxfield[6] = 0;]]></searchcode>
+			<replacecode><![CDATA[} else {
+  $editedxfield[6] = 0;
+  $editedxfield[22] = 0;
+}]]></replacecode>
+		</operation>
+		<operation action="after">
+			<searchcode><![CDATA[$checked2 = ($editedxfield[6] ? " checked" : "");]]></searchcode>
+			<replacecode><![CDATA[$checked22 = ($editedxfield[22] ? " checked" : "");]]></replacecode>
+		</operation>
+		<operation action="after">
+			<searchcode><![CDATA[<div id="optional2">
+	<div class="checkbox display-inline-block"><label><input class="icheck" type="checkbox" name="editedxfield[6]"<?php echo $checked2; ?> id="editxsixt" /><?php echo $lang['xfield_xw2']; ?></label></div><i class="help-button visible-lg-inline-block text-primary-600 fa fa-question-circle position-right position-left" data-rel="popover" data-trigger="hover" data-placement="right" data-content="<?php echo $lang['xfield_xw3']; ?>" ></i>
+</div>]]></searchcode>
+			<replacecode><![CDATA[<div id="optional22">
+    <div class="checkbox display-inline-block"><label><input class="icheck" type="checkbox" name="editedxfield[22]"<?php echo $checked22; ?> id="translit" />Использовать транслит в ссылках</label></div>
+</div>]]></replacecode>
+		</operation>
+		<operation action="after">
+			<searchcode><![CDATA[ShowOrHideEx("optional2", value == "text" || value == "select");]]></searchcode>
+			<replacecode><![CDATA[ShowOrHideEx("optional22", value == "text" || value == "select");]]></replacecode>
+		</operation>
+		<operation action="replace">
+			<searchcode><![CDATA[$xf_search_words[] = array( $db->safesql($value[0]), $db->safesql($value2) );]]></searchcode>
+			<replacecode><![CDATA[$xf_search_words[] = array( $db->safesql($value[0]), $db->safesql($value2), ($value[22]) ? $db->safesql(totranslit($value2, true, false)) : '' );]]></replacecode>
+		</operation>
+	</file>
+	<file name="engine/inc/addnews.php">
+		<operation action="replace">
+			<searchcode><![CDATA[$temp_array[] = "('" . $id . "', '" . $value[0] . "', '" . $value[1] . "')";]]></searchcode>
+			<replacecode><![CDATA[$temp_array[] = "('" . $id . "', '" . $value[0] . "', '" . $value[1] . "', '" . $value[2] . "')";]]></replacecode>
+		</operation>
+		<operation action="replace">
+			<searchcode><![CDATA[$db->query( "INSERT INTO " . PREFIX . "_xfsearch (news_id, tagname, tagvalue) VALUES " . $xf_search_words );]]></searchcode>
+			<replacecode><![CDATA[$db->query( "INSERT INTO " . PREFIX . "_xfsearch (news_id, tagname, tagvalue, tagvalue_translit) VALUES " . $xf_search_words );]]></replacecode>
+		</operation>
+	</file>
+	<file name="engine/inc/editnews.php">
+		<operation action="replace">
+			<searchcode><![CDATA[$temp_array[] = "('" . $item_db[0] . "', '" . $value[0] . "', '" . $value[1] . "')";]]></searchcode>
+			<replacecode><![CDATA[$temp_array[] = "('" . $item_db[0] . "', '" . $value[0] . "', '" . $value[1] . "', '" . $value[2] . "')";]]></replacecode>
+		</operation>
+		<operation action="replace">
+			<searchcode><![CDATA[$db->query( "INSERT INTO " . PREFIX . "_xfsearch (news_id, tagname, tagvalue) VALUES " . $xf_search_words );]]></searchcode>
+			<replacecode><![CDATA[$db->query( "INSERT INTO " . PREFIX . "_xfsearch (news_id, tagname, tagvalue, tagvalue_translit) VALUES " . $xf_search_words );]]></replacecode>
+		</operation>
+	</file>
+	<file name="engine/modules/show.short.php">
+		<operation action="replace">
+			<searchcode><![CDATA[if( $config['allow_alt_url'] ) $value3[] = "<a href=\"" . $config['http_home_url'] . "xfsearch/" .$value[0]."/". urlencode( $value2 ) . "/\">" . $value2 . "</a>";]]></searchcode>
+			<replacecode><![CDATA[if( $config['allow_alt_url'] ) $value3[] = "<a href=\"" . $config['http_home_url'] . "xfsearch/" .$value[0]."/". (($value[22]) ? urlencode( totranslit($value2, true, false) ) : urlencode( $value2 )) . "/\">" . $value2 . "</a>";]]></replacecode>
+		</operation>
+	</file>
+	<file name="engine/modules/show.full.php">
+		<operation action="replace">
+			<searchcode><![CDATA[if( $config['allow_alt_url'] ) $value3[] = "<a href=\"" . $config['http_home_url'] . "xfsearch/" .$value[0]."/". urlencode( $value2 ) . "/\">" . $value2 . "</a>";]]></searchcode>
+			<replacecode><![CDATA[if( $config['allow_alt_url'] ) $value3[] = "<a href=\"" . $config['http_home_url'] . "xfsearch/" .$value[0]."/". (($value[22]) ? urlencode( totranslit($value2, true, false) ) : urlencode( $value2 )) . "/\">" . $value2 . "</a>";]]></replacecode>
+		</operation>
+	</file>
+	<file name="engine/modules/show.custom.php">
+		<operation action="replace">
+			<searchcode><![CDATA[if( $config['allow_alt_url'] ) $value3[] = "<a href=\"" . $config['http_home_url'] . "xfsearch/" .$value[0]."/". urlencode( $value2 ) . "/\">" . $value2 . "</a>";]]></searchcode>
+			<replacecode><![CDATA[if( $config['allow_alt_url'] ) $value3[] = "<a href=\"" . $config['http_home_url'] . "xfsearch/" .$value[0]."/". (($value[22]) ? urlencode( totranslit($value2, true, false) ) : urlencode( $value2 )) . "/\">" . $value2 . "</a>";]]></replacecode>
+		</operation>
+	</file>
+	<file name="engine/engine.php">
+		<operation action="replace">
+			<searchcode><![CDATA[$db->query ( "SELECT news_id, tagvalue FROM " . PREFIX . "_xfsearch WHERE tagname='{$xfname}' AND tagvalue='{$xf}'" );]]></searchcode>
+			<replacecode><![CDATA[$data_xf = xfieldsload();
+$this_xf = array_filter($data_xf, function($item) use($xfname) {
+    return $item[0] == $xfname && $item[22] == 1;
+});
+if ($this_xf) {
+    $translit_xf = totranslit($xf, true, false);
+    if ($xf != $translit_xf) {
+        $re_url = $config['http_home_url'] . "xfsearch/{$xfname}/" . urlencode(str_replace("&#039;", "'", $translit_xf)) . "/";
+        header("HTTP/1.0 301 Moved Permanently");
+        header("Location: {$re_url}");
+        die("Redirect");
+    }
+    $db->query ( "SELECT news_id, tagvalue, tagvalue_translit FROM " . PREFIX . "_xfsearch WHERE tagname='{$xfname}' AND tagvalue_translit='{$xf}'" );
+} else {
+    $db->query ( "SELECT news_id, tagvalue FROM " . PREFIX . "_xfsearch WHERE tagname='{$xfname}' AND tagvalue='{$xf}'" );
+}]]></replacecode>
+		</operation>
+		<operation action="before">
+			<searchcode><![CDATA[if(!$ic) $xf = $row['tagvalue'];]]></searchcode>
+			<replacecode><![CDATA[if(!$ic && $row['tagvalue_translit']) {
+    $xf_temp = $row['tagvalue'];
+    $xf_translit = $row['tagvalue_translit'];
+}]]></replacecode>
+		</operation>
+		<operation action="before">
+			<searchcode><![CDATA[$url_page = $config['http_home_url'] . "xfsearch/{$xfname}/" . urlencode ( str_replace("&#039;", "'", $xf) );]]></searchcode>
+			<replacecode><![CDATA[if ($xf_translit) $xf = $xf_translit;]]></replacecode>
+		</operation>
+		<operation action="after">
+			<searchcode><![CDATA[if (!count ($xf_array)) $xf_array[] = 0;]]></searchcode>
+			<replacecode><![CDATA[if ($xf_translit) $xf = $xf_temp;]]></replacecode>
+		</operation>
+	</file>
+	<file name="engine/ajax/rebuild.php">
+		<operation action="replace">
+			<searchcode><![CDATA[if($value2) $xf_search_words[] = array( $db->safesql($value[0]), $db->safesql($value2) );]]></searchcode>
+			<replacecode><![CDATA[if($value2) $xf_search_words[] = array( $db->safesql($value[0]), $db->safesql($value2), ($value[22]) ? $db->safesql(totranslit($value2, true, false)) : '' );]]></replacecode>
+		</operation>
+		<operation action="replace">
+			<searchcode><![CDATA[$temp_array[] = "('" . $row['id'] . "', '" . $value[0] . "', '" . $value[1] . "')";]]></searchcode>
+			<replacecode><![CDATA[$temp_array[] = "('" . $row['id'] . "', '" . $value[0] . "', '" . $value[1] . "', '" . $value[2] . "')";]]></replacecode>
+		</operation>
+		<operation action="replace">
+			<searchcode><![CDATA[$db->query( "INSERT INTO " . PREFIX . "_xfsearch (news_id, tagname, tagvalue) VALUES " . $xf_search_words );]]></searchcode>
+			<replacecode><![CDATA[$db->query( "INSERT INTO " . PREFIX . "_xfsearch (news_id, tagname, tagvalue, tagvalue_translit) VALUES " . $xf_search_words );]]></replacecode>
+		</operation>
+	</file>
+</dleplugin>

@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<dleplugin>
+	<name>Разделение категорий на вывод друг от друга в новостях</name>
+	<description>Плагин позволит выводить отдельно категории друг от друга, заменяя громоздкие конструкции [catlist] [ https://lazydev.pro ]</description>
+	<icon></icon>
+	<version></version>
+	<dleversion>13.0</dleversion>
+	<versioncompare>greater</versioncompare>
+	<upgradeurl></upgradeurl>
+	<filedelete>0</filedelete>
+	<mysqlinstall><![CDATA[]]></mysqlinstall>
+	<mysqlupgrade><![CDATA[]]></mysqlupgrade>
+	<mysqlenable><![CDATA[]]></mysqlenable>
+	<mysqldisable><![CDATA[]]></mysqldisable>
+	<mysqldelete><![CDATA[]]></mysqldelete>
+	<file name="engine/modules/functions.php">
+		<operation action="before">
+			<searchcode><![CDATA[function get_url($id) {]]></searchcode>
+			<replacecode><![CDATA[function checkCatFunction($data, $cat_list, $cat_info)
+{
+	$cat_list = array_flip($cat_list);
+    $flag_checkCatFunction = false;
+    
+    if (preg_match("#id=['\"](.+?)['\"]#i", $data[1], $match)) {
+		$cats_select = true;
+		$cat_array = [];
+		$match[1] = explode(',', $match[1]);
+
+		foreach ($match[1] as $value) {
+			if (substr_count($value, '-')) {
+                $temp_array = [];
+                $temp_cats = explode('-', $value);
+                foreach ($cat_info as $cats) {
+                    if ($cats['id'] >= $temp_cats[0] && $cats['id'] <= $temp_cats[1]) {
+                        $temp_array[] = intval($cats['id']);
+                    }
+                }
+                sort($temp_array);
+                $cat_array = $cat_array + $temp_array;
+            } else {
+                $cat_array[] = intval($value);
+            }
+		}
+	}
+
+    $sub_cat = false;
+    if (preg_match("#sub=['\"](.+?)['\"]#i", $data[1], $match)) {
+		if ($match[1] == 'yes') {
+            $sub_cat = true;
+        }
+	}
+
+    if ($sub_cat) {
+        $sub_cats = [];
+        foreach ($cat_array as $value) {
+            $sub_cats[] = get_sub_cats($value);
+        }
+        $sub_cats = implode('|', $sub_cats);
+        $sub_cats_array = explode('|', $sub_cats);
+        $cat_array = array_unique($sub_cats_array);
+    }
+    
+    foreach ($cat_array as $value) {
+        if (isset($cat_list[$value])) {
+            $flag_checkCatFunction = true;
+            break;
+        }
+    }
+    
+    return ($flag_checkCatFunction == true) ? $data[2] : '';
+}
+
+function catFunction($data, $cat_list, $config, $cat_info)
+{
+	$cat_list = array_flip($cat_list);
+	
+    if (preg_match("#id=['\"](.+?)['\"]#i", $data[1], $match)) {
+		$cats_select = true;
+		$cat_array = [];
+		$match[1] = explode(',', $match[1]);
+
+		foreach ($match[1] as $value) {
+			if (substr_count($value, '-')) {
+                $temp_array = [];
+                $temp_cats = explode('-', $value);
+                foreach ($cat_info as $cats) {
+                    if ($cats['id'] >= $temp_cats[0] && $cats['id'] <= $temp_cats[1]) {
+                        $temp_array[] = intval($cats['id']);
+                    }
+                }
+                sort($temp_array);
+                $cat_array = $cat_array + $temp_array;
+            } else {
+                $cat_array[] = intval($value);
+            }
+		}
+	}
+
+    $sub_cat = false;
+    if (preg_match("#sub=['\"](.+?)['\"]#i", $data[1], $match)) {
+		if ($match[1] == 'yes') {
+            $sub_cat = true;
+        }
+	}
+
+    $get_cat = [];
+    
+    if ($sub_cat) {
+        $sub_cats = [];
+        foreach ($cat_array as $value) {
+            $sub_cats[] = get_sub_cats($value);
+        }
+        $sub_cats = implode('|', $sub_cats);
+        $sub_cats_array = explode('|', $sub_cats);
+        $cat_array = array_unique($sub_cats_array);
+    }
+    
+    foreach ($cat_array as $value) {
+        if (isset($cat_list[$value])) {
+            if ($config['allow_alt_url']) {
+                $get_cat[] = "<a href=\"" . $config['http_home_url'] . get_url($value) . "/\">{$cat_info[$value]['name']}</a>";
+            } else {
+                $get_cat[] = "<a href=\"/index.php?do=cat&category={$cat_info[$value]['alt_name']}\">{$cat_info[$value]['name']}</a>";
+            }
+        }
+    }
+    
+    $get_cat = implode($config['category_separator'] . ' ', $get_cat);
+
+    return $get_cat;
+}]]></replacecode>
+		</operation>
+	</file>
+	<file name="engine/modules/show.short.php">
+		<operation action="before">
+			<searchcode><![CDATA[		$tpl->compile( 'content' );
+
+	}]]></searchcode>
+			<replacecode><![CDATA[if (strpos($tpl->copy_template, '[cat') !== false) {
+    $tpl->copy_template = preg_replace_callback("#\\[cat(.+?)\\](.+?)\\[/cat\\]#is", function($data) use ($cat_list, $cat_info)
+    {
+        return checkCatFunction($data, $cat_list, $cat_info);
+    }, $tpl->copy_template);
+}
+if (strpos($tpl->copy_template, '{cat') !== false) {
+    $tpl->copy_template = preg_replace_callback("#{cat(.+?)}#i", function($data) use ($cat_list, $config, $cat_info)
+    {
+        return catFunction($data, $cat_list, $config, $cat_info);
+    }, $tpl->copy_template);
+}]]></replacecode>
+		</operation>
+	</file>
+	<file name="engine/modules/show.full.php">
+		<operation action="before">
+			<searchcode><![CDATA[$tpl->compile( 'content' );]]></searchcode>
+			<replacecode><![CDATA[if (strpos($tpl->copy_template, '[cat') !== false) {
+    $tpl->copy_template = preg_replace_callback("#\\[cat(.+?)\\](.+?)\\[/cat\\]#is", function($data) use ($cat_list, $cat_info)
+    {
+        return checkCatFunction($data, $cat_list, $cat_info);
+    }, $tpl->copy_template);
+}
+if (strpos($tpl->copy_template, '{cat') !== false) {
+    $tpl->copy_template = preg_replace_callback("#{cat(.+?)}#i", function($data) use ($cat_list, $config, $cat_info)
+    {
+        return catFunction($data, $cat_list, $config, $cat_info);
+    }, $tpl->copy_template);
+}]]></replacecode>
+		</operation>
+	</file>
+	<file name="engine/modules/show.custom.php">
+		<operation action="before">
+			<searchcode><![CDATA[	$tpl->compile( 'content' );
+
+}]]></searchcode>
+			<replacecode><![CDATA[if (strpos($tpl->copy_template, '[cat') !== false) {
+    $tpl->copy_template = preg_replace_callback("#\\[cat(.+?)\\](.+?)\\[/cat\\]#is", function($data) use ($cat_list, $cat_info)
+    {
+        return checkCatFunction($data, $cat_list, $cat_info);
+    }, $tpl->copy_template);
+}
+if (strpos($tpl->copy_template, '{cat') !== false) {
+    $tpl->copy_template = preg_replace_callback("#{cat(.+?)}#i", function($data) use ($cat_list, $config, $cat_info)
+    {
+        return catFunction($data, $cat_list, $config, $cat_info);
+    }, $tpl->copy_template);
+}]]></replacecode>
+		</operation>
+	</file>
+</dleplugin>

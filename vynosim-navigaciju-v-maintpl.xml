@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<dleplugin>
+	<name>Выносим навигацию в main.tpl</name>
+	<description>Удаляем привязку навигации к тегу {content} и добавляем отдельный в main.tpl {navigation}  [ https://lazydev.pro ]</description>
+	<icon></icon>
+	<version></version>
+	<dleversion>13.0</dleversion>
+	<versioncompare>greater</versioncompare>
+	<upgradeurl></upgradeurl>
+	<filedelete>0</filedelete>
+	<mysqlinstall><![CDATA[]]></mysqlinstall>
+	<mysqlupgrade><![CDATA[]]></mysqlupgrade>
+	<mysqlenable><![CDATA[]]></mysqlenable>
+	<mysqldisable><![CDATA[]]></mysqldisable>
+	<mysqldelete><![CDATA[]]></mysqldelete>
+	<file name="engine/modules/show.short.php">
+		<operation action="replace">
+			<searchcode><![CDATA[switch ( $config['news_navigation'] ) {
+
+				case "2" :
+					
+					$tpl->result['content'] = $tpl->result['navi'].$tpl->result['content'];
+					break;
+
+				case "3" :
+					
+					$tpl->result['content'] = $tpl->result['navi'].$tpl->result['content'].$tpl->result['navi'];
+					break;
+
+				default :
+					$tpl->result['content'] .= $tpl->result['navi'];
+					break;
+			
+			}]]></searchcode>
+		</operation>
+	</file>
+	<file name="engine/modules/main.php">
+		<operation action="after">
+			<searchcode><![CDATA[$tpl->set ( '{info}',  $tpl->result['info'] );]]></searchcode>
+			<replacecode><![CDATA[$tpl->set('{navigation}', $tpl->result['navi'] ?: '');]]></replacecode>
+		</operation>
+	</file>
+</dleplugin>

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<dleplugin>
+	<name>Сортировка новостей в админ панели</name>
+	<description>Хак позволит настроить сортировку новостей по умолчанию в админ панели [ https://lazydev.pro ]</description>
+	<icon></icon>
+	<version></version>
+	<dleversion>13.0</dleversion>
+	<versioncompare>greater</versioncompare>
+	<upgradeurl></upgradeurl>
+	<filedelete>0</filedelete>
+	<mysqlinstall><![CDATA[]]></mysqlinstall>
+	<mysqlupgrade><![CDATA[]]></mysqlupgrade>
+	<mysqlenable><![CDATA[]]></mysqlenable>
+	<mysqldisable><![CDATA[]]></mysqldisable>
+	<mysqldelete><![CDATA[]]></mysqldelete>
+	<file name="engine/inc/options.php">
+		<operation action="before">
+			<searchcode><![CDATA[showRow( $lang['opt_sys_sort'], $lang['opt_sys_sortd'],]]></searchcode>
+			<replacecode><![CDATA[$all_xfield = xfieldsload();
+$count_all_xfield = count($all_xfield);
+$xfield_sort = [];
+for ($i = 0; $i < $count_all_xfield; $i++) {
+    $xfield_sort['xf_' . $all_xfield[$i][0]] = $all_xfield[$i][1];
+}
+$sort_array = ['date' => 'По дате добавления', 'editdate' => 'По дате редактирования', 'rating' => 'По рейтингу', 'comm_num' => 'По количеству комментариев', 'news_read' => 'По количеству просмотров'];
+if ($xfield_sort) {
+    $sort_array = $sort_array + $xfield_sort;
+}
+function select_sortForm($data)
+{
+    $opt = false;
+    foreach ($data[1] as $key => $val) {
+        if (strpos($key, 'xf_') !== false && !$opt) {
+            $opt = true;
+            $output = "<optgroup label=\"Стандартные поля\">" . $output . "</optgroup><optgroup label=\"Дополнительные поля\">";
+        }
+        if ($data[2]) {
+            $output .= "<option value=\"{$key}\"";
+        } else {
+            $output .= "<option value=\"{$val}\"";
+        }
+        if (is_array($data[3])) {
+            foreach ($data[3] as $element) {
+                if ($data[2] && $element == $key) {
+                    $output .= " selected ";
+                } elseif (!$data[2] && $element == $val) {
+                    $output .= " selected ";
+                }
+            }
+        } elseif ($data[2] && $data[3] == $key) {
+            $output .= " selected ";
+        } elseif (!$data[2] && $data[3] == $val) {
+            $output .= " selected ";
+        }
+        $output .= ">{$val}</option>\n";
+    }
+    $output .= "</optgroup>";
+return <<<HTML
+<select name="{$data[0]}" id="mypreselect" class="sortnewsadmin" data-placeholder="Поля сортировки" style="max-width: 300px;" multiple>
+    {$output}
+</select>
+HTML;
+}
+showRow("Критерий сортировки новостей в админ панели", "Выберите поля для сортировки новостей по умолчанию", select_sortForm(["save_con[admin_news_sort][]", $sort_array, true, $config['admin_news_sort'] ? explode(',', $config['admin_news_sort']) : false]));
+echo <<<HTML
+<script>
+$(function() {
+	$('.sortnewsadmin').chosen({no_results_text: 'Не найдено'});
+});
+</script>
+HTML;
+showRow("Порядок сортировки новостей в админ панели", "Выберите порядок сортировки новостей", makeDropDown(["DESC" => $lang['opt_sys_mminus'], "ASC" => $lang['opt_sys_mplus']], "save_con[admin_news_msort]", $config['admin_news_msort']));]]></replacecode>
+		</operation>
+		<operation action="after">
+			<searchcode><![CDATA[$save_con['allow_plugins'] = intval($save_con['allow_plugins']);]]></searchcode>
+			<replacecode><![CDATA[if ($save_con['admin_news_sort']) {
+    $temp_array = [];
+    foreach($save_con['admin_news_sort'] as $value) {
+        $temp_array[] = trim(strip_tags(stripslashes($value)));
+    }
+    if ($temp_array) {
+        $save_con['admin_news_sort'] = implode(',', $temp_array);
+    } else {
+        unset($save_con['admin_news_sort']);
+    }
+    unset($temp_array);
+}]]></replacecode>
+		</operation>
+	</file>
+	<file name="engine/inc/editnews.php">
+		<operation action="replace">
+			<searchcode><![CDATA[if( ! $order_by ) $order_by = "fixed desc, approve asc, date desc";]]></searchcode>
+			<replacecode><![CDATA[if (!$order_by) {
+    if ($config['admin_news_sort']) {
+        $temp_array_sort = explode(',', $config['admin_news_sort']);
+        $temp_array = [];
+        foreach ($temp_array_sort as $value) {
+            if (strpos($value, 'xf_') !== false) {
+                $value = substr_replace($value, '', 0, 3);
+                $temp_array[] = "ABS(SUBSTRING_INDEX(SUBSTRING_INDEX(xfields, '{$value}|', -1), '||', 1)) " . $config['admin_news_msort'];
+            } else {
+                $temp_array[] = $value . ' ' . $config['admin_news_msort'];
+            }
+        }
+        $config['admin_news_sort'] = implode(', ', $temp_array);
+        $order_by = "fixed desc, approve asc, {$config['admin_news_sort']}";
+    } else {
+        $order_by = "fixed desc, approve asc, date desc";
+    }
+}]]></replacecode>
+		</operation>
+	</file>
+</dleplugin>

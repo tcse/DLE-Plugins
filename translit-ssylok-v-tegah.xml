@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<dleplugin>
+	<name>Транслит ссылок в тегах</name>
+	<description>Используем транслит вместо кириллицы в ссылках тегов [ https://lazydev.pro ]</description>
+	<icon></icon>
+	<version></version>
+	<dleversion>13.0</dleversion>
+	<versioncompare>greater</versioncompare>
+	<upgradeurl></upgradeurl>
+	<filedelete>0</filedelete>
+	<mysqlinstall><![CDATA[ALTER TABLE `{prefix}_tags` ADD `tag_translit` VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL AFTER `tag`;]]></mysqlinstall>
+	<mysqlupgrade><![CDATA[]]></mysqlupgrade>
+	<mysqlenable><![CDATA[]]></mysqlenable>
+	<mysqldisable><![CDATA[]]></mysqldisable>
+	<mysqldelete><![CDATA[ALTER TABLE `{prefix}_tags` DROP `tag_translit`;]]></mysqldelete>
+	<file name="engine/inc/addnews.php">
+		<operation action="replace">
+			<searchcode><![CDATA[$tags[] = "('" . $id . "', '" . trim( $value ) . "')";]]></searchcode>
+			<replacecode><![CDATA[$tags[] = "('" . $id . "', '" . trim( $value ) . "', '" . totranslit(trim($value), true, false) . "')";]]></replacecode>
+		</operation>
+		<operation action="replace">
+			<searchcode><![CDATA[$db->query( "INSERT INTO " . PREFIX . "_tags (news_id, tag) VALUES " . $tags );]]></searchcode>
+			<replacecode><![CDATA[$db->query( "INSERT INTO " . PREFIX . "_tags (news_id, tag, tag_translit) VALUES " . $tags );]]></replacecode>
+		</operation>
+	</file>
+	<file name="engine/inc/editnews.php">
+		<operation action="replace">
+			<searchcode><![CDATA[$tags[] = "('" . $item_db[0] . "', '" . trim( $value ) . "')";]]></searchcode>
+			<replacecode><![CDATA[$tags[] = "('" . $item_db[0] . "', '" . trim( $value ) . "', '" . totranslit(trim($value), true, false) . "')";]]></replacecode>
+		</operation>
+		<operation action="replace">
+			<searchcode><![CDATA[$db->query( "INSERT INTO " . PREFIX . "_tags (news_id, tag) VALUES " . $tags );]]></searchcode>
+			<replacecode><![CDATA[$db->query( "INSERT INTO " . PREFIX . "_tags (news_id, tag, tag_translit) VALUES " . $tags );]]></replacecode>
+		</operation>
+	</file>
+	<file name="engine/modules/show.full.php">
+		<operation action="replace">
+			<searchcode><![CDATA[if( $config['allow_alt_url'] ) $tags[] = "<span><a href=\"" . $config['http_home_url'] . "tags/" . urlencode( $url_tag ) . "/\">" . $value . "</a></span>";]]></searchcode>
+			<replacecode><![CDATA[if( $config['allow_alt_url'] ) $tags[] = "<span><a href=\"" . $config['http_home_url'] . "tags/" . urlencode( totranslit($url_tag, true, false) ) . "/\">" . $value . "</a></span>";]]></replacecode>
+		</operation>
+	</file>
+	<file name="engine/modules/show.custom.php">
+		<operation action="replace">
+			<searchcode><![CDATA[if( $config['allow_alt_url'] ) $tags[] = "<a href=\"" . $config['http_home_url'] . "tags/" . urlencode( $url_tag ) . "/\">" . $value . "</a>";]]></searchcode>
+			<replacecode><![CDATA[if( $config['allow_alt_url'] ) $tags[] = "<a href=\"" . $config['http_home_url'] . "tags/" . urlencode( totranslit($url_tag, true, false) ) . "/\">" . $value . "</a>";]]></replacecode>
+		</operation>
+	</file>
+	<file name="engine/modules/show.short.php">
+		<operation action="replace">
+			<searchcode><![CDATA[if( $config['allow_alt_url'] ) $tags[] = "<a href=\"" . $config['http_home_url'] . "tags/" . urlencode( $url_tag ) . "/\">" . $value . "</a>";]]></searchcode>
+			<replacecode><![CDATA[if( $config['allow_alt_url'] ) $tags[] = "<a href=\"" . $config['http_home_url'] . "tags/" . urlencode( totranslit($url_tag, true, false) ) . "/\">" . $value . "</a>";]]></replacecode>
+		</operation>
+	</file>
+	<file name="engine/engine.php">
+		<operation action="replace">
+			<searchcode><![CDATA[$db->query ( "SELECT news_id, tag FROM " . PREFIX . "_tags WHERE tag='{$tag}'" );]]></searchcode>
+			<replacecode><![CDATA[$translit_tag = totranslit($tag, true, false);
+if ($tag != $translit_tag) {
+  $re_url = $config['http_home_url'] . 'tags/' . urlencode(str_replace("&amp;", "&", $translit_tag)) . '/';
+  header("HTTP/1.0 301 Moved Permanently");
+  header("Location: {$re_url}");
+  die("Redirect");
+}
+$db->query ( "SELECT news_id, tag FROM " . PREFIX . "_tags WHERE tag_translit='{$translit_tag}'" );]]></replacecode>
+		</operation>
+		<operation action="before">
+			<searchcode><![CDATA[define( 'CLOUDSTAG', $tag );]]></searchcode>
+			<replacecode><![CDATA[$tagTemp = $tag;
+$tag = $translit_tag;]]></replacecode>
+		</operation>
+		<operation action="before">
+			<searchcode><![CDATA[if (count ( $tag_array )) {]]></searchcode>
+			<replacecode><![CDATA[$tag = $db->safesql($tagTemp);]]></replacecode>
+		</operation>
+	</file>
+	<file name="engine/ajax/rebuild.php">
+		<operation action="replace">
+			<searchcode><![CDATA[$result = $db->query("SELECT p.id, p.short_story, p.full_story, p.xfields, p.title, p.allow_br, e.news_id FROM " . PREFIX . "_post p LEFT JOIN " . PREFIX . "_post_extras e ON (p.id=e.news_id) LIMIT ".$startfrom.", ".$count_per_step);]]></searchcode>
+			<replacecode><![CDATA[$result = $db->query("SELECT p.id, p.short_story, p.full_story, p.xfields, p.title, p.allow_br, p.tags, e.news_id FROM " . PREFIX . "_post p LEFT JOIN " . PREFIX . "_post_extras e ON (p.id=e.news_id) LIMIT ".$startfrom.", ".$count_per_step);]]></replacecode>
+		</operation>
+		<operation action="before">
+			<searchcode><![CDATA[$step++;]]></searchcode>
+			<replacecode><![CDATA[if ($row['tags']) {
+	$tagArray = explode(',', $row['tags']);
+	$db->query("DELETE FROM " . PREFIX . "_tags WHERE news_id='{$row['id']}'");
+	$temp_array = [];
+	foreach ($tagArray as $tag) {
+		$temp_array[] = "('" . $row['id'] . "', '" . $tag . "', '" . totranslit(trim($tag), true, false) . "')";
+	}
+	
+	$temp_array = implode(', ', $temp_array);
+	$db->query("INSERT INTO " . PREFIX . "_tags (news_id, tag, tag_translit) VALUES " . $temp_array);
+}]]></replacecode>
+		</operation>
+	</file>
+	<file name="engine/modules/tagscloud.php">
+		<operation action="replace">
+			<searchcode><![CDATA[urlencode($url_tag)]]></searchcode>
+			<replacecode><![CDATA[urlencode(totranslit($url_tag, true, false))]]></replacecode>
+		</operation>
+	</file>
+</dleplugin>
