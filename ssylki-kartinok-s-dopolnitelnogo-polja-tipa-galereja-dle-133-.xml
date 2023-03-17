@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<dleplugin>
+	<name>Ссылки картинок с дополнительного поля типа Галерея [ DLE 13.3 ]</name>
+	<description>Плагин позволит выводить ссылки картинок с доп поля типа галерея [ https://lazydev.pro ]</description>
+	<icon></icon>
+	<version></version>
+	<dleversion>13.2</dleversion>
+	<versioncompare>greater</versioncompare>
+	<upgradeurl></upgradeurl>
+	<filedelete>0</filedelete>
+	<needplugin></needplugin>
+	<mnotice>1</mnotice>
+	<mysqlinstall><![CDATA[]]></mysqlinstall>
+	<mysqlupgrade><![CDATA[]]></mysqlupgrade>
+	<mysqlenable><![CDATA[]]></mysqlenable>
+	<mysqldisable><![CDATA[]]></mysqldisable>
+	<mysqldelete><![CDATA[]]></mysqldelete>
+	<phpinstall><![CDATA[]]></phpinstall>
+	<phpupgrade><![CDATA[]]></phpupgrade>
+	<phpenable><![CDATA[]]></phpenable>
+	<phpdisable><![CDATA[]]></phpdisable>
+	<phpdelete><![CDATA[]]></phpdelete>
+	<notice>
+		<![CDATA[
+			Документация по плагину https://lazydev.pro/fcode/26-url-xfield-gallery-plugin.html 
+
+			[b]Использование:[/b]
+
+			[xfgiven_X image="Y" scr][xfvalue_X image="Y" scr][/xfgiven_X image="Y" scr] - выведет ссылку на картинку с дополнительного поля X которая идет по счет Y.
+			[xfgiven_X thumb="Y" scr][xfvalue_X thumb="Y" scr][/xfgiven_X thumb="Y" scr] - выведет ссылку на миниатюру с дополнительного поля X которая идет по счет Y.
+
+			[xfgiven_X image="Y" scr] ... [/xfgiven_X image="Y" scr] - выведет текст внутри тегов если картинка с дополнительного поля X которая идет по счет Y была загружена.
+			[xfnotgiven_X image="Y" scr] ... [/xfnotgiven_X image="Y" scr] - выведет текст внутри тегов если картинка с дополнительного поля X которая идет по счет Y не была загружена.
+
+			[b]Примеры кода для шаблонов сайта:[/b]
+
+			[xfgiven_galery image="1" scr][xfvalue_galery image="1" scr][/xfgiven_galery image="1" scr]
+			[xfgiven_galery image="2" scr][xfvalue_galery image="2" scr][/xfgiven_galery image="2" scr]
+			[xfnotgiven_galery image="2" scr]Второй картинки с поля galery нет.[/xfnotgiven_galery image="2" scr]
+			[xfgiven_galery thumb="1" scr][xfvalue_galery thumb="1" scr][/xfgiven_galery thumb="1" scr]
+			[xfgiven_galery thumb="2" scr][xfvalue_galery thumb="2" scr][/xfgiven_galery thumb="2" scr]
+			[xfnotgiven_galery thumb="2" scr]Второй миниатюры с поля galery нет.[/xfnotgiven_galery thumb="2" scr]
+		]]>
+	</notice>
+	<file name="engine/modules/show.full.php">
+		<operation action="before">
+			<searchcode><![CDATA[$tpl->set( "[xfvalue_{$value[0]}]", $xfieldsdata[$value[0]] );]]></searchcode>
+			<replacecode><![CDATA[if ($value[3] == "imagegalery") {
+	$tpl->copy_template = preg_replace("'\\[xfgiven_{$preg_safe_name} (thumb|image)=\"(\d+?)\" scr\\](.*?)\\[/xfgiven_{$preg_safe_name} \\1=\"\\2\" scr\\]'is", '', $tpl->copy_template);
+	$tpl->copy_template = preg_replace("'\\[xfnotgiven_{$preg_safe_name} (thumb|image)=\"(\d+?)\" scr\\](.*?)\\[/xfnotgiven_{$preg_safe_name} \\1=\"\\2\" scr\\]'is", '\\3', $tpl->copy_template);
+}]]></replacecode>
+		</operation>
+		<operation action="before">
+			<searchcode><![CDATA[}
+					
+					if($single_need AND count($gallery_single_image) ) {
+						foreach($gallery_single_image as $temp_key => $temp_value) $tpl->set( $temp_key, $temp_value);
+					}]]></searchcode>
+			<replacecode><![CDATA[if ($img_url && stripos($tpl->copy_template, "[xfvalue_{$preg_safe_name} image=\"{$xf_image_count}\" scr]") !== false) {
+	$tpl->set("[xfvalue_{$value[0]} image=\"{$xf_image_count}\" scr]", $img_url);
+	$tpl->copy_template = preg_replace("'\\[xfgiven_{$preg_safe_name} image=\"{$xf_image_count}\" scr\\](.*?)\\[/xfgiven_{$preg_safe_name} image=\"{$xf_image_count}\" scr\\]'is", '\\1', $tpl->copy_template);
+	$tpl->copy_template = preg_replace("'\\[xfnotgiven_{$preg_safe_name} image=\"{$xf_image_count}\" scr\\](.*?)\\[/xfnotgiven_{$preg_safe_name} image=\"{$xf_image_count}\" scr\\]'is", '', $tpl->copy_template);
+}
+if ($thumb_url && stripos($tpl->copy_template, "[xfvalue_{$value[0]} thumb=\"{$xf_image_count}\" scr]") !== false) {
+	$tpl->set("[xfvalue_{$value[0]} thumb=\"{$xf_image_count}\" scr]", $thumb_url);
+	$tpl->copy_template = preg_replace("'\\[xfgiven_{$preg_safe_name} thumb=\"{$xf_image_count}\" scr\\](.*?)\\[/xfgiven_{$preg_safe_name} thumb=\"{$xf_image_count}\" scr\\]'is", '\\1', $tpl->copy_template);
+	$tpl->copy_template = preg_replace("'\\[xfnotgiven_{$preg_safe_name} thumb=\"{$xf_image_count}\" scr\\](.*?)\\[/xfnotgiven_{$preg_safe_name} thumb=\"{$xf_image_count}\" scr\\]'is", '', $tpl->copy_template);
+}]]></replacecode>
+		</operation>
+	</file>
+	<file name="engine/modules/show.short.php">
+		<operation action="before">
+			<searchcode><![CDATA[$tpl->set( "[xfvalue_{$value[0]}]", $xfieldsdata[$value[0]] );]]></searchcode>
+			<replacecode><![CDATA[if ($value[3] == "imagegalery") {
+	$tpl->copy_template = preg_replace("'\\[xfgiven_{$preg_safe_name} (thumb|image)=\"(\d+?)\" scr\\](.*?)\\[/xfgiven_{$preg_safe_name} \\1=\"\\2\" scr\\]'is", '', $tpl->copy_template);
+	$tpl->copy_template = preg_replace("'\\[xfnotgiven_{$preg_safe_name} (thumb|image)=\"(\d+?)\" scr\\](.*?)\\[/xfnotgiven_{$preg_safe_name} \\1=\"\\2\" scr\\]'is", '\\3', $tpl->copy_template);
+}]]></replacecode>
+		</operation>
+		<operation action="after">
+			<searchcode><![CDATA[else {
+    $gallery_image[] = "<li><img src=\"{$img_url}\" alt=\"{$temp_alt}\"></li>";
+    $gallery_single_image['[xfvalue_'.$value[0].' image="'.$xf_image_count.'"]'] = "<img class=\"xfieldimage {$value[0]}\" src=\"{$img_url}\" alt=\"{$temp_alt}\">";
+}]]></searchcode>
+			<replacecode><![CDATA[if ($img_url && stripos($tpl->copy_template, "[xfvalue_{$preg_safe_name} image=\"{$xf_image_count}\" scr]") !== false) {
+	$tpl->set("[xfvalue_{$value[0]} image=\"{$xf_image_count}\" scr]", $img_url);
+	$tpl->copy_template = preg_replace("'\\[xfgiven_{$preg_safe_name} image=\"{$xf_image_count}\" scr\\](.*?)\\[/xfgiven_{$preg_safe_name} image=\"{$xf_image_count}\" scr\\]'is", '\\1', $tpl->copy_template);
+	$tpl->copy_template = preg_replace("'\\[xfnotgiven_{$preg_safe_name} image=\"{$xf_image_count}\" scr\\](.*?)\\[/xfnotgiven_{$preg_safe_name} image=\"{$xf_image_count}\" scr\\]'is", '', $tpl->copy_template);
+}
+if ($thumb_url && stripos($tpl->copy_template, "[xfvalue_{$value[0]} thumb=\"{$xf_image_count}\" scr]") !== false) {
+	$tpl->set("[xfvalue_{$value[0]} thumb=\"{$xf_image_count}\" scr]", $thumb_url);
+	$tpl->copy_template = preg_replace("'\\[xfgiven_{$preg_safe_name} thumb=\"{$xf_image_count}\" scr\\](.*?)\\[/xfgiven_{$preg_safe_name} thumb=\"{$xf_image_count}\" scr\\]'is", '\\1', $tpl->copy_template);
+	$tpl->copy_template = preg_replace("'\\[xfnotgiven_{$preg_safe_name} thumb=\"{$xf_image_count}\" scr\\](.*?)\\[/xfnotgiven_{$preg_safe_name} thumb=\"{$xf_image_count}\" scr\\]'is", '', $tpl->copy_template);
+}]]></replacecode>
+		</operation>
+	</file>
+	<file name="engine/modules/show.custom.php">
+		<operation action="after">
+			<searchcode><![CDATA[else {
+    $gallery_image[] = "<li><img src=\"{$img_url}\" alt=\"{$temp_alt}\"></li>";
+    $gallery_single_image['[xfvalue_'.$value[0].' image="'.$xf_image_count.'"]'] = "<img class=\"xfieldimage {$value[0]}\" src=\"{$img_url}\" alt=\"{$temp_alt}\">";
+}]]></searchcode>
+			<replacecode><![CDATA[if ($img_url && stripos($tpl->copy_template, "[xfvalue_{$preg_safe_name} image=\"{$xf_image_count}\" scr]") !== false) {
+	$tpl->set("[xfvalue_{$value[0]} image=\"{$xf_image_count}\" scr]", $img_url);
+	$tpl->copy_template = preg_replace("'\\[xfgiven_{$preg_safe_name} image=\"{$xf_image_count}\" scr\\](.*?)\\[/xfgiven_{$preg_safe_name} image=\"{$xf_image_count}\" scr\\]'is", '\\1', $tpl->copy_template);
+	$tpl->copy_template = preg_replace("'\\[xfnotgiven_{$preg_safe_name} image=\"{$xf_image_count}\" scr\\](.*?)\\[/xfnotgiven_{$preg_safe_name} image=\"{$xf_image_count}\" scr\\]'is", '', $tpl->copy_template);
+}
+if ($thumb_url && stripos($tpl->copy_template, "[xfvalue_{$value[0]} thumb=\"{$xf_image_count}\" scr]") !== false) {
+	$tpl->set("[xfvalue_{$value[0]} thumb=\"{$xf_image_count}\" scr]", $thumb_url);
+	$tpl->copy_template = preg_replace("'\\[xfgiven_{$preg_safe_name} thumb=\"{$xf_image_count}\" scr\\](.*?)\\[/xfgiven_{$preg_safe_name} thumb=\"{$xf_image_count}\" scr\\]'is", '\\1', $tpl->copy_template);
+	$tpl->copy_template = preg_replace("'\\[xfnotgiven_{$preg_safe_name} thumb=\"{$xf_image_count}\" scr\\](.*?)\\[/xfnotgiven_{$preg_safe_name} thumb=\"{$xf_image_count}\" scr\\]'is", '', $tpl->copy_template);
+}]]></replacecode>
+		</operation>
+		<operation action="before">
+			<searchcode><![CDATA[$tpl->set( "[xfvalue_{$value[0]}]", $xfieldsdata[$value[0]] );]]></searchcode>
+			<replacecode><![CDATA[if ($value[3] == "imagegalery") {
+	$tpl->copy_template = preg_replace("'\\[xfgiven_{$preg_safe_name} (thumb|image)=\"(\d+?)\" scr\\](.*?)\\[/xfgiven_{$preg_safe_name} \\1=\"\\2\" scr\\]'is", '', $tpl->copy_template);
+	$tpl->copy_template = preg_replace("'\\[xfnotgiven_{$preg_safe_name} (thumb|image)=\"(\d+?)\" scr\\](.*?)\\[/xfnotgiven_{$preg_safe_name} \\1=\"\\2\" scr\\]'is", '\\3', $tpl->copy_template);
+}]]></replacecode>
+		</operation>
+	</file>
+</dleplugin>
